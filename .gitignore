@@ -1,3 +1,6 @@
+# Ignore the lockfile - our deps are good enough here
+Gemfile.lock
+
 # rcov generated
 coverage
 coverage.data
