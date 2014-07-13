@@ -1,0 +1,111 @@
+require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
+
+describe Chantier::ThreadPool do
+  
+  before(:each) do
+    @files = (0...20).map do
+      SecureRandom.hex(12).tap { |filename| FileUtils.touch(filename) }
+    end
+  end
+  
+  after(:each) do
+    @files.map(&File.method(:unlink))
+  end
+  
+  context '#map_fork' do
+    let(:manager) { described_class.new(5) }
+    
+    it 'processes multiple files' do
+      
+      data_chunks = (0..10).map{|e| Digest::SHA1.hexdigest(e.to_s) }
+      
+      expect(manager).not_to be_still_running
+      
+      manager.map_fork(@files) do | filename |
+        sleep(0.05 + (rand / 10))
+        File.open(filename, "wb"){|f| f.write("Worker completed for #{filename}") }
+      end
+      
+      expect(manager).not_to be_still_running
+      
+      @files.each do | filename |
+        expect(File.read(filename)).to eq("Worker completed for #{filename}")
+      end
+    end
+  end
+  
+  context 'with 0 concurrent slots' do
+    it 'raises an exception' do
+      expect {
+        described_class.new(0)
+      }.to raise_error(RuntimeError, 'Need at least 1 slot, given 0')
+      
+      expect {
+        described_class.new(-1)
+      }.to raise_error(RuntimeError, 'Need at least 1 slot, given -1')
+    end
+  end
+  
+  it 'gets instantiated with the given number of slots' do
+    described_class.new(10)
+  end
+  
+  context 'with 1 slot' do
+    let(:manager) { described_class.new(1) }
+    
+    it 'processes 1 file' do
+      filename = @files[0]
+      manager.fork_task do
+        sleep(0.05 + (rand / 10))
+        File.open(filename, "wb"){|f| f.write("Worker completed") }
+      end
+      manager.block_until_complete!
+      
+      expect(File.read(filename)).to eq('Worker completed')
+    end
+    
+    it 'processes multiple files' do
+      expect(manager).not_to be_still_running
+      
+      @files.each do | filename |
+        manager.fork_task do
+          sleep(0.05 + (rand / 10))
+          File.open(filename, "wb"){|f| f.write("Worker completed for #{filename}") }
+        end
+      end
+      
+      expect(manager).to be_still_running
+      
+      manager.block_until_complete!
+      
+      @files.each do | filename |
+        expect(File.read(filename)).to eq("Worker completed for #{filename}")
+      end
+    end
+  end
+  
+  context 'with 5 slots' do
+    let(:manager) { described_class.new(5) }
+    
+    it 'processes multiple files' do
+      
+      expect(manager).not_to be_still_running
+      
+      @files.each do | filename |
+        manager.fork_task do
+          sleep(0.05 + (rand / 10))
+          File.open(filename, "wb"){|f| f.write("Worker completed for #{filename}") }
+        end
+      end
+      
+      expect(manager).to be_still_running
+      
+      manager.block_until_complete!
+      
+      @files.each do | filename |
+        expect(File.read(filename)).to eq("Worker completed for #{filename}")
+      end
+    end
+  end
+end
+
