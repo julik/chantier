@@ -2,6 +2,8 @@
 
 require 'rubygems'
 require 'bundler'
+require_relative 'lib/chantier'
+
 begin
   Bundler.setup(:default, :development)
 rescue Bundler::BundlerError => e
@@ -14,6 +16,7 @@ require 'rake'
 require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://guides.rubygems.org/specification-reference/ for more options
+  gem.version = Chantier::VERSION
   gem.name = "chantier"
   gem.homepage = "http://github.com/julik/chantier"
   gem.license = "MIT"
