@@ -21,7 +21,7 @@ If you have a finite Enumerable at hand you can also launch it into the ProcessP
    manager = Chantier::ThreadPool.new(slots = 4)
    
    manager.map_fork(job_tickets) do | job_ticket |
-     # this block will run in a forked subprocess
+     # this block will run in a thread
      Churner.new(job).churn
      ...
    end
