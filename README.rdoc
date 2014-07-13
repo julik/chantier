@@ -1,6 +1,30 @@
 = chantier
 
-Description goes here.
+Dead-simple task manager for "fire and forget" jobs. Has two interchangeable pools - processes and threads, which
+are interchangeable.
+
+The only thing Chantier checks for is that the spun off tasks have completed. It also limits the number of tasks
+active at the same time. Your code will block until a slot becomes available for a task.
+
+    manager = Chantier::ProcessPool.new(slots = 4) # You can also use ThreadPool
+    jobs_hose.each_job do | job |
+      manager.fork_task do # this call will block until a slot becomes available
+        Churner.new(job).churn # this block runs in a subprocess
+      end
+      manager.still_running? # => most likely "true"
+    end
+    
+    manager.block_until_complete! #=> Will block until all the subprocesses have terminated
+ 
+If you have a finite Enumerable at hand you can also launch it into the ProcessPool, like so:
+ 
+   manager = Chantier::ThreadPool.new(slots = 4)
+   
+   manager.map_fork(job_tickets) do | job_ticket |
+     # this block will run in a forked subprocess
+     Churner.new(job).churn
+     ...
+   end
 
 == Contributing to chantier
  
