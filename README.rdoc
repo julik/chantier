@@ -1,7 +1,7 @@
 = chantier
 
-Dead-simple task manager for "fire and forget" jobs. Has two interchangeable pools - processes and threads, which
-are interchangeable.
+Dead-simple task manager for "fire and forget" jobs. Has two interchangeable pools - processes and threads. The API
+of those two is the same, so you can play at will and figure out which one works better.
 
 The only thing Chantier checks for is that the spun off tasks have completed. It also limits the number of tasks
 active at the same time. Your code will block until a slot becomes available for a task.
@@ -15,16 +15,20 @@ active at the same time. Your code will block until a slot becomes available for
     end
     
     manager.block_until_complete! #=> Will block until all the subprocesses have terminated
- 
-If you have a finite Enumerable at hand you can also launch it into the ProcessPool, like so:
+
+If you have a finite Enumerable at hand you can also launch it into the ProcessPool/ThreadPool, like so:
  
    manager = Chantier::ThreadPool.new(slots = 4)
    
-   manager.map_fork(job_tickets) do | job_ticket |
+   manager.map_fork(job_tickets) do | job_ticket | # job_tickets has to be an Enumerable 
      # this block will run in a thread
-     Churner.new(job).churn
+     Churner.new(job_ticket).churn
      ...
    end
+
+Chantier does not provide any built-in IPC or inter-thread communication features - this should
+stimulate you to write your tasks without them having to do IPC in the first place.
+
 
 == Contributing to chantier
  
