@@ -17,8 +17,8 @@ Jeweler::Tasks.new do |gem|
   gem.name = "chantier"
   gem.homepage = "http://github.com/julik/chantier"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.summary = %Q{ Dead-simple worker table based multiprocessing/multithreading }
+  gem.description = %Q{ Process your jobs in parallel with a simple table of processes or threads }
   gem.email = "me@julik.nl"
   gem.authors = ["Julik Tarkhanov"]
   # dependencies defined in Gemfile
