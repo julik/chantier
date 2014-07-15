@@ -27,10 +27,10 @@
 # Can be rewritten using Threads if operation on JVM/Rubinius will be feasible.
 class Chantier::ProcessPool
   # Kill the spawned processes after at most X seconds
-  KILL_AFTER_SECONDS = 60 * 2
+  # KILL_AFTER_SECONDS = 60 * 2
   
   # http://linuxman.wikispaces.com/killing+me+softly
-  TERMINATION_SIGNALS = %w( TERM HUP INT QUIT PIPE KILL )
+  # TERMINATION_SIGNALS = %w( TERM HUP INT QUIT PIPE KILL )
   
   # The manager uses loops in a few places. By doing a little sleep()
   # in those loops we can yield process control back to the OS which brings
@@ -100,17 +100,17 @@ class Chantier::ProcessPool
     # Dispatch the killer thread which kicks in after KILL_AFTER_SECONDS.
     # Note that we do not manage the @pids table here because once the process
     # gets terminated it will bounce back to the standard wait() above.
-    Thread.new do
-      sleep KILL_AFTER_SECONDS
-      begin
-        TERMINATION_SIGNALS.each do | sig |
-          Process.kill(sig, task_pid)
-          sleep 5 # Give it some time to react
-        end
-      rescue Errno::ESRCH
-        # It has already quit, nothing to do
-      end
-    end
+    # Thread.new do
+    #   sleep KILL_AFTER_SECONDS
+    #   begin
+    #     TERMINATION_SIGNALS.each do | sig |
+    #       Process.kill(sig, task_pid)
+    #       sleep 5 # Give it some time to react
+    #     end
+    #   rescue Errno::ESRCH
+    #     # It has already quit, nothing to do
+    #   end
+    # end
   end
   
   # Tells whether some processes are still churning
