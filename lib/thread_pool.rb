@@ -32,7 +32,7 @@ class Chantier::ThreadPool
   # the CPU usage of the managing process to small numbers. If you just do
   # a loop {} MRI will saturate a whole core and not let go off of it until
   # the loop returns.
-  SCHEDULER_SLEEP_SECONDS = 0.05
+  SCHEDULER_SLEEP_SECONDS = (1.0 / 500)
   
   def initialize(num_threads)
     raise "Need at least 1 slot, given #{num_threads.to_i}" unless num_threads.to_i > 0
