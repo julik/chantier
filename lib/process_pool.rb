@@ -26,11 +26,6 @@
 #
 # Can be rewritten using Threads if operation on JVM/Rubinius will be feasible.
 class Chantier::ProcessPool
-  # Kill the spawned processes after at most X seconds
-  # KILL_AFTER_SECONDS = 60 * 2
-  
-  # http://linuxman.wikispaces.com/killing+me+softly
-  # TERMINATION_SIGNALS = %w( TERM HUP INT QUIT PIPE KILL )
   
   # The manager uses loops in a few places. By doing a little sleep()
   # in those loops we can yield process control back to the OS which brings
@@ -96,6 +91,8 @@ class Chantier::ProcessPool
       # Now we can remove that process from the process table
       @semaphore.synchronize { @pids[destination_slot_idx] = nil }
     end
+    
+    return task_pid
     
     # Dispatch the killer thread which kicks in after KILL_AFTER_SECONDS.
     # Note that we do not manage the @pids table here because once the process

@@ -1,6 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
-describe Chantier::ProcessPool do
+describe Chantier::ProcessPoolWithKill do
   
   before(:each) do
     @files = (0...20).map do
@@ -37,17 +37,13 @@ describe Chantier::ProcessPool do
   context 'with 0 concurrent slots' do
     it 'raises an exception' do
       expect {
-        Chantier::ProcessPool.new(0)
+        described_class.new(0)
       }.to raise_error(RuntimeError, 'Need at least 1 slot, given 0')
       
       expect {
-        Chantier::ProcessPool.new(-1)
+        described_class.new(-1)
       }.to raise_error(RuntimeError, 'Need at least 1 slot, given -1')
     end
-  end
-  
-  it 'gets instantiated with the given number of slots' do
-    Chantier::ProcessPool.new(10)
   end
   
   context 'with 1 slot' do
@@ -84,6 +80,21 @@ describe Chantier::ProcessPool do
       @files.each do | filename |
         expect(File.read(filename)).to eq("Worker completed for #{filename}")
       end
+    end
+    
+    it 'forcibly quites a process that is hung for too long' do
+      manager_with_short_timeout = described_class.new(1, timeout=0.4)
+      
+      filename = SecureRandom.hex(22)
+      manager_with_short_timeout.fork_task do
+        10.times do
+          sleep 1 # WAY longer than the timeout
+        end
+        File.open(filename, "wb") {|f| f.write("Should never happen")}
+      end
+      
+      manager_with_short_timeout.block_until_complete!
+      expect(File.exist?(filename)).to eq(false)
     end
   end
   
