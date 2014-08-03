@@ -35,13 +35,13 @@ class Chantier::ProcessPoolWithKill < Chantier::ProcessPool
     # gets terminated it will bounce back to the standard wait() above.
     Thread.new do
       sleep @kill_after_seconds
-      TERMINATION_SIGNALS.each do | sig |
-        begin
+      begin
+        TERMINATION_SIGNALS.each do | sig |
           Process.kill(sig, task_pid)
           sleep 1 # Give it some time to react
-        rescue Errno::ESRCH
-          # It has already quit, nothing to do
         end
+      rescue Errno::ESRCH
+        # It has already quit, nothing to do
       end
     end
     
