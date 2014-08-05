@@ -34,10 +34,21 @@ class Chantier::ThreadPool
   # the loop returns.
   SCHEDULER_SLEEP_SECONDS = (1.0 / 500)
   
-  def initialize(num_threads)
+  # Initializes a new ProcessPool with the given number of workers. If max_failures is
+  # given the fork_task method will raise an exception if more than N threads spawned
+  # have raised during execution.
+  def initialize(num_threads, max_failures: nil)
     raise "Need at least 1 slot, given #{num_threads.to_i}" unless num_threads.to_i > 0
     @threads = [nil] * num_threads.to_i
     @semaphore = Mutex.new
+    
+    # Failure counters
+    @failure_count = 0
+    @max_failures = max_failures && max_failures.to_i
+    
+    # Information on the last exception that happened
+    @aborted = false
+    @last_representative_exception = nil
   end
   
   # Distributes the elements in the given Enumerable to parallel workers,
@@ -61,6 +72,10 @@ class Chantier::ThreadPool
   # the thread it is called from until a slot in the thread table
   # becomes free.
   def fork_task(&blk)
+    if @last_representative_exception
+      raise "Reached error limit of #{@max_failures} (last error was #{@last_representative_exception.inspect})"
+    end
+    
     destination_slot_idx = nil
     
     # Try to find a slot in the process table where this job can go
@@ -78,11 +93,11 @@ class Chantier::ThreadPool
     
     # No need to lock this because we already reserved that slot
     @threads[destination_slot_idx] = Thread.new do
-      yield
-      # Now we can remove that process from the process table
+      # Run the given block
+      run_block_with_exception_protection(&blk)
+      # ...and remove that process from the process table
       @semaphore.synchronize { @threads[destination_slot_idx] = nil }
     end
-    
   end
   
   # Tells whether some processes are still churning
@@ -98,4 +113,20 @@ class Chantier::ThreadPool
       end
     end
   end
+  
+  private
+  
+  def run_block_with_exception_protection(&blk)
+    yield
+  rescue Exception => e
+    # Register the failure and decrement the counter. If we had more than N 
+    # failures stop the machine completely by raising an exception in the caller.
+    @semaphore.synchronize do
+      @failure_count += 1
+      if @max_failures && (@failure_count > @max_failures)
+        @last_representative_exception = e
+      end
+    end
+  end
+  
 end

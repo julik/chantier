@@ -34,7 +34,13 @@ class Chantier::ProcessPool
   # the loop returns.
   SCHEDULER_SLEEP_SECONDS = (1.0 / 1000)
   
-  def initialize(num_procs)
+  # Initializes a new ProcessPool with the given number of workers. If max_failures is
+  # given the fork_task method will raise an exception if more than N processes spawned
+  # have been terminated with a non-0 exit status.
+  def initialize(num_procs, max_failures: nil)
+    @max_failures = max_failures && max_failures.to_i
+    @non_zero_exits = 0
+    
     raise "Need at least 1 slot, given #{num_procs.to_i}" unless num_procs.to_i > 0
     @pids = [nil] * num_procs.to_i
     @semaphore = Mutex.new
@@ -62,6 +68,10 @@ class Chantier::ProcessPool
   # becomes free. Once that happens, the given block will be forked off
   # and the method will return.
   def fork_task(&blk)
+    if @max_failures && @non_zero_exits > @max_failures
+      raise "Reached error limit of processes quitting with non-0 status - limit set at #{@max_failures}"
+    end
+    
     destination_slot_idx = nil
     
     # Try to find a slot in the process table where this job can go
@@ -88,8 +98,13 @@ class Chantier::ProcessPool
     # process table
     Thread.new do
       Process.wait(task_pid) # This call will block until that process quites
-      # Now we can remove that process from the process table
-      @semaphore.synchronize { @pids[destination_slot_idx] = nil }
+      terminated_normally = $?.exited? && $?.exitstatus.zero?
+      @semaphore.synchronize do
+        # Now we can remove that process from the process table
+        @pids[destination_slot_idx] = nil
+        # and increment the error count if needed
+        @non_zero_exits += 1 unless terminated_normally
+      end
     end
     
     return task_pid

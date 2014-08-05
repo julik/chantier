@@ -50,6 +50,27 @@ describe Chantier::ProcessPool do
     Chantier::ProcessPool.new(10)
   end
   
+  context 'with failures' do
+    it 'raises after 4 failures' do
+      under_test = described_class.new(num_workers=3, max_failures: '4')
+      expect {
+        15.times do 
+          under_test.fork_task { raise "I am such a failure" }
+        end
+      }.to raise_error('Reached error limit of processes quitting with non-0 status - limit set at 4')
+    end
+    
+    it 'runs through the jobs if max_failures is not given' do
+      under_test = described_class.new(num_workers=3)
+      7.times {
+        under_test.fork_task { raise "I am such a failure" }
+      }
+      under_test.block_until_complete!
+      expect(true).to eq(true), "Should have gotten to this assertion without the Pool blocking"
+    end
+  end
+  
+  
   context 'with 1 slot' do
     let(:manager) { described_class.new(1) }
     
