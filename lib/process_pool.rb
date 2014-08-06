@@ -37,13 +37,13 @@ class Chantier::ProcessPool
   # Initializes a new ProcessPool with the given number of workers. If max_failures is
   # given the fork_task method will raise an exception if more than N processes spawned
   # have been terminated with a non-0 exit status.
-  def initialize(num_procs, max_failures: nil)
-    @max_failures = max_failures && max_failures.to_i
-    @non_zero_exits = 0
-    
+  def initialize(num_procs, failure_policy: Chantier::FailurePolicies::None.new)
     raise "Need at least 1 slot, given #{num_procs.to_i}" unless num_procs.to_i > 0
     @pids = [nil] * num_procs.to_i
     @semaphore = Mutex.new
+    
+    @failure_policy = Chantier::FailurePolicies::MutexWrapper.new(failure_policy)
+    @failure_policy.arm!
   end
   
   # Distributes the elements in the given Enumerable to parallel workers,
@@ -68,8 +68,8 @@ class Chantier::ProcessPool
   # becomes free. Once that happens, the given block will be forked off
   # and the method will return.
   def fork_task(&blk)
-    if @max_failures && @non_zero_exits > @max_failures
-      raise "Reached error limit of processes quitting with non-0 status - limit set at #{@max_failures}"
+    if @failure_policy.limit_reached?
+      raise "Reached error limit of processes quitting with non-0 status"
     end
     
     destination_slot_idx = nil
@@ -102,27 +102,12 @@ class Chantier::ProcessPool
       @semaphore.synchronize do
         # Now we can remove that process from the process table
         @pids[destination_slot_idx] = nil
-        # and increment the error count if needed
-        @non_zero_exits += 1 unless terminated_normally
       end
+      terminated_normally ? @failure_policy.success! : @failure_policy.failure!
     end
     
-    return task_pid
-    
-    # Dispatch the killer thread which kicks in after KILL_AFTER_SECONDS.
-    # Note that we do not manage the @pids table here because once the process
-    # gets terminated it will bounce back to the standard wait() above.
-    # Thread.new do
-    #   sleep KILL_AFTER_SECONDS
-    #   begin
-    #     TERMINATION_SIGNALS.each do | sig |
-    #       Process.kill(sig, task_pid)
-    #       sleep 5 # Give it some time to react
-    #     end
-    #   rescue Errno::ESRCH
-    #     # It has already quit, nothing to do
-    #   end
-    # end
+    # Make sure to return the PID afterwards
+    task_pid
   end
   
   # Tells whether some processes are still churning

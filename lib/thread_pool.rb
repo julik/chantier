@@ -37,17 +37,15 @@ class Chantier::ThreadPool
   # Initializes a new ProcessPool with the given number of workers. If max_failures is
   # given the fork_task method will raise an exception if more than N threads spawned
   # have raised during execution.
-  def initialize(num_threads, max_failures: nil)
+  def initialize(num_threads, failure_policy: Chantier::FailurePolicies::None.new)
     raise "Need at least 1 slot, given #{num_threads.to_i}" unless num_threads.to_i > 0
     @threads = [nil] * num_threads.to_i
     @semaphore = Mutex.new
     
-    # Failure counters
-    @failure_count = 0
-    @max_failures = max_failures && max_failures.to_i
+    @failure_policy = Chantier::FailurePolicies::MutexWrapper.new(failure_policy)
+    @failure_policy.arm!
     
     # Information on the last exception that happened
-    @aborted = false
     @last_representative_exception = nil
   end
   
@@ -72,8 +70,8 @@ class Chantier::ThreadPool
   # the thread it is called from until a slot in the thread table
   # becomes free.
   def fork_task(&blk)
-    if @last_representative_exception
-      raise "Reached error limit of #{@max_failures} (last error was #{@last_representative_exception.inspect})"
+    if @failure_policy.limit_reached?
+      raise "Reached error limit (last error was #{@last_representative_exception.inspect})"
     end
     
     destination_slot_idx = nil
@@ -118,15 +116,12 @@ class Chantier::ThreadPool
   
   def run_block_with_exception_protection(&blk)
     yield
+    @failure_policy.success!
   rescue Exception => e
     # Register the failure and decrement the counter. If we had more than N 
     # failures stop the machine completely by raising an exception in the caller.
-    @semaphore.synchronize do
-      @failure_count += 1
-      if @max_failures && (@failure_count > @max_failures)
-        @last_representative_exception = e
-      end
-    end
+    @failure_policy.failure!
+    @last_representative_exception = e if @failure_policy.limit_reached?
   end
   
 end
