@@ -51,9 +51,12 @@ a non-0 exit code):
     4.times { pool.fork { puts "All is well"} }
     6.times { pool.fork { raise "Drat!"} } # Will only run 4 times and fail after
 
-To allow only a specific number of failures within a time period:
-
-    fp = Chantier::FailurePolicies::WithinInterval.new(max_failures=5, within_seconds=3)
+To allow only a specific number of failures within a time period wrap the policy in
+a `WithInterval` object:
+    
+    # Only allow 5 failures per second
+    counter = Chantier::FailurePolicies::Count.new(5)
+    fp = Chantier::FailurePolicies::WithinInterval.new(counter, within_seconds=3)
   
 You can use those to set fine-grained failure conditions based on the runtime behavior of
 the Pool you are using and job duration/failure rate. Chantier pools are made to run in
