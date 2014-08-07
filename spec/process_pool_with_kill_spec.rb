@@ -83,7 +83,7 @@ describe Chantier::ProcessPoolWithKill do
     end
     
     it 'forcibly quites a process that is hung for too long' do
-      manager_with_short_timeout = described_class.new(1, timeout=0.4)
+      manager_with_short_timeout = described_class.new(1, kill_after_seconds: 0.4)
       
       filename = SecureRandom.hex(22)
       manager_with_short_timeout.fork_task do
@@ -95,6 +95,20 @@ describe Chantier::ProcessPoolWithKill do
       
       manager_with_short_timeout.block_until_complete!
       expect(File.exist?(filename)).to eq(false)
+    end
+  end
+  
+  context 'with failures' do
+    class AlwaysWrong
+      def arm!; end
+      def limit_reached?; true; end
+    end
+    
+    it 'honors the failure policy object passed in' do
+      subject = described_class.new(5, failure_policy: AlwaysWrong.new)
+      expect {
+        subject.fork_task { "never happens" }
+      }.to raise_error("Reached error limit of processes quitting with non-0 status")
     end
   end
   

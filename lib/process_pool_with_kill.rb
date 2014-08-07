@@ -2,7 +2,7 @@
 # maintains a pool of those proceses (same as ProcessPool). Will also forcibly quit
 # those processes after a certain period to ensure they do not hang
 #
-#   manager = ProcessPoolWithKill.new(slots = 4, kill_after = 5) # seconds
+#   manager = ProcessPoolWithKill.new(slots = 4, kill_after_seconds: 5) # seconds
 #   jobs_hose.each_job do | job |
 #     # this call will block until a slot becomes available
 #     manager.fork_task do # this block runs in a subprocess
@@ -18,9 +18,9 @@ class Chantier::ProcessPoolWithKill < Chantier::ProcessPool
   TERMINATION_SIGNALS = %w( TERM HUP INT QUIT PIPE KILL )
   
   DEFAULT_KILL_TIMEOUT = 60
-  def initialize(num_procs, kill_after_seconds = DEFAULT_KILL_TIMEOUT)
+  def initialize(num_procs, kill_after_seconds: DEFAULT_KILL_TIMEOUT, **kwargs)
     @kill_after_seconds = kill_after_seconds.to_f
-    super(num_procs)
+    super(num_procs, **kwargs)
   end
   
   # Run the given block in a forked subprocess. This method will block
