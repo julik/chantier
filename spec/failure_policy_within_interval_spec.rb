@@ -1,8 +1,10 @@
 require_relative 'spec_helper'
 
 describe Chantier::FailurePolicies::WithinInterval do
+  let(:counter) { Chantier::FailurePolicies::Count.new(10) }
+  
   it 'does not cross the limit when errors are spread out' do
-    policy = described_class.new(10, 0.5)
+    policy = described_class.new(counter, 0.5)
     policy.arm!
     
     10.times do
@@ -13,7 +15,7 @@ describe Chantier::FailurePolicies::WithinInterval do
   end
   
   it 'does cross the limit when errors are spread out' do
-    policy = described_class.new(10, 0.5)
+    policy = described_class.new(counter, 0.5)
     policy.arm!
     
     10.times do

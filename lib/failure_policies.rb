@@ -94,37 +94,51 @@ module Chantier::FailurePolicies
   # Limits the number of failures that may be registered
   # within the given interval
   #
-  #   policy = FailWithinTimePeriod.new(4, 60 * 2)
-  #   policy.limit_reached? # => false
+  #   policy = Count.new(10)
+  #   policy_within_interval = FailWithinTimePeriod.new(policy, 60 * 2) # 2 minutes
+  #   policy_within_interval.limit_reached? # => false
   #   #... and then during 1 minute
-  #   5.times { policy.failure! }
-  #   policy.limit_reached? # => true
+  #   5.times { policy_within_interval.failure! }
+  #   policy_within_interval.limit_reached? # => true
   #
-  # Once the interval is passed, the error count will
-  # be reset back to 0.
+  # Once the interval is passed,
+  # the error count will be reset back to 0.
   class WithinInterval < None
-    def initialize(max_per_interval, interval_in_seconds)
-      @max = max_per_interval
+    def initialize(policy, interval_in_seconds)
+      @policy = policy
       @interval = interval_in_seconds
     end
     
+    def success!
+      interval_cutoff!
+      @policy.success!
+    end
+    
     def arm!
+      @policy.arm!
       @interval_started = Time.now.utc.to_f
       @count = 0
     end
   
     def failure!
-      t = Time.now.utc.to_f
-      if (t - @interval_started) > @interval
-        @interval_started = t
-        @count = 0
-      end
-      @count += 1
+      interval_cutoff!
+      @policy.failure!
     end
   
     def limit_reached?
-      @count >= @max
+      @policy.limit_reached?
     end
+    
+    private
+    
+    def interval_cutoff!
+      t = Time.now.utc.to_f
+      if (t - @interval_started) > @interval
+        @interval_started = t
+        @policy.arm!
+      end
+    end
+    
   end
 
   # Wraps a FailurePolicy-compatible object in a Mutex 
