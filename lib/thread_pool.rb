@@ -71,7 +71,7 @@ class Chantier::ThreadPool
   # becomes free.
   def fork_task(&blk)
     if @failure_policy.limit_reached?
-      raise "Reached error limit (last error was #{@last_representative_exception.inspect})"
+      raise @last_representative_exception
     end
     
     destination_slot_idx = nil
