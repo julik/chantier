@@ -103,7 +103,8 @@ class Chantier::ThreadPool
     @threads.any?{|e| e && e.respond_to?(:alive?) && e.alive? }
   end
   
-  # Analogous to Process.wait or wait_all - will block until all of the process slots have been freed.
+  # Analogous to Process.wait or wait_all - will block until all of the 
+  # threads have terminated
   def block_until_complete!
     @threads.map do |e| 
       if e.respond_to?(:join) && e.alive?
