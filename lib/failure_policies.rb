@@ -86,6 +86,7 @@ module Chantier::FailurePolicies
     end
   
     def limit_reached?
+      return false unless ((@failures + @successes) > 4)
       ratio = @failures.to_f / (@failures + @successes)
       (ratio * 100) >= @threshold
     end

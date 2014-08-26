@@ -24,4 +24,16 @@ describe Chantier::FailurePolicies::Percentage do
     policy.arm!
     expect(policy).not_to be_limit_reached
   end
+  
+  it 'does not trigger until it has been called at least 4 times' do
+    policy = described_class.new(50)
+    policy.arm!
+    
+    2.times { policy.failure! }
+    expect(policy).not_to be_limit_reached
+    2.times { policy.failure! }
+    expect(policy).not_to be_limit_reached
+    1.times { policy.failure! }
+    expect(policy).to be_limit_reached
+  end
 end
