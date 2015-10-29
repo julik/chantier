@@ -26,7 +26,6 @@
 #
 # Can be rewritten using Threads if operation on JVM/Rubinius will be feasible.
 class Chantier::ProcessPool
-  
   # The manager uses loops in a few places. By doing a little sleep()
   # in those loops we can yield process control back to the OS which brings
   # the CPU usage of the managing process to small numbers. If you just do
@@ -61,6 +60,11 @@ class Chantier::ProcessPool
       fork_task { yield(single_block_argument) }
     end
     block_until_complete!
+  end
+  
+  # Launch copies of the given task in all available slots for this Pool.
+  def fork_task_in_all_slots(&blk)
+    @pids.times { fork_task(&blk) }
   end
   
   # Run the given block in a forked subprocess. This method will block

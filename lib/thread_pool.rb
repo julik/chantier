@@ -26,7 +26,6 @@
 #
 # Can be rewritten using Threads if operation on JVM/Rubinius will be feasible.
 class Chantier::ThreadPool
-  
   # The manager uses loops in a few places. By doing a little sleep()
   # in those loops we can yield process control back to the OS which brings
   # the CPU usage of the managing process to small numbers. If you just do
@@ -47,6 +46,11 @@ class Chantier::ThreadPool
     
     # Information on the last exception that happened
     @last_representative_exception = nil
+  end
+  
+  # Launch copies of the given task in all available slots for this Pool.
+  def fork_task_in_all_slots(&blk)
+    @threads.times { fork_task(&blk) }
   end
   
   # Distributes the elements in the given Enumerable to parallel workers,
