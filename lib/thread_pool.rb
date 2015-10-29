@@ -26,6 +26,7 @@
 #
 # Can be rewritten using Threads if operation on JVM/Rubinius will be feasible.
 class Chantier::ThreadPool
+  include Chantier::Repeat
   
   # The manager uses loops in a few places. By doing a little sleep()
   # in those loops we can yield process control back to the OS which brings
