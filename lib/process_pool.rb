@@ -64,7 +64,7 @@ class Chantier::ProcessPool
   
   # Launch copies of the given task in all available slots for this Pool.
   def fork_task_in_all_slots(&blk)
-    @pids.times { fork_task(&blk) }
+    @pids.length.times { fork_task(&blk) }
   end
   
   # Run the given block in a forked subprocess. This method will block

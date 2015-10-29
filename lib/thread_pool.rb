@@ -50,7 +50,7 @@ class Chantier::ThreadPool
   
   # Launch copies of the given task in all available slots for this Pool.
   def fork_task_in_all_slots(&blk)
-    @threads.times { fork_task(&blk) }
+    @threads.length.times { fork_task(&blk) }
   end
   
   # Distributes the elements in the given Enumerable to parallel workers,
